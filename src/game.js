@@ -1,7 +1,14 @@
 import EventEmitter from "./EventEmitter.js";
 import pieces from "./typesPieces.js";
 
-export default class Game extends EventEmitter{
+export default class Game extends EventEmitter {
+    static points = {
+        1: 40,
+        2: 100,
+        3: 300,
+        4: 1200
+    }
+
     lines = 0;
     score = 0;
     lvl = 0;
@@ -9,7 +16,10 @@ export default class Game extends EventEmitter{
     constructor(row, column) {
         super()
         this.playfield = this.createPlayfield(row, column)
-        this.activePiece = this.createNewPiece()
+        this.activePiece = this.createPiece()
+        this.nextPiece = this.createPiece()
+
+        setInterval(this.moveToDown.bind(this), 1000)
     }
 
     get playfieldWithPiece() {
@@ -19,6 +29,7 @@ export default class Game extends EventEmitter{
         for (let i = 0; i < block.length; i++) {
             for (let j = 0; j < block.length; j++) {
                 if (!block[i][j]) continue
+
                 playfield[y + i][x + j] = block[i][j]
             }
         }
@@ -31,7 +42,7 @@ export default class Game extends EventEmitter{
 
         for (let i = 0; i < row; i++) {
             playfield[i] = []
-            for (let j = 0; j <column; j++){
+            for (let j = 0; j < column; j++) {
                 playfield[i][j] = 0
             }
         }
@@ -49,15 +60,14 @@ export default class Game extends EventEmitter{
                 this.playfield[y + i][x + j] = pieceBlock[i][j]
             }
         }
-
-        this.changeActivePiece()
-    }
-    
-    changeActivePiece() {
-        this.activePiece = this.createNewPiece()
     }
 
-    createNewPiece() {
+    updatePieces() {
+        this.activePiece = this.nextPiece
+        this.nextPiece = this.createPiece()
+    }
+
+    createPiece() {
         const block = pieces[Math.floor(Math.random() * pieces.length)]
 
         const posX = Math.floor(Math.random() * (this.playfield[0].length - (block.length - 1)))
@@ -87,25 +97,19 @@ export default class Game extends EventEmitter{
     moveToRight() {
         if (this.checkInside(this.activePiece.x + 1, this.activePiece.y)) {
             this.activePiece.x += 1
-            return
         }
-        this.addPiece()
     }
 
     moveToLeft() {
         if (this.checkInside(this.activePiece.x - 1, this.activePiece.y)) {
             this.activePiece.x -= 1
-            return
         }
-        this.addPiece()
     }
 
     moveToUp() {
         if (this.checkInside(this.activePiece.x, this.activePiece.y - 1)) {
             this.activePiece.y -= 1
-            return
         }
-        this.addPiece()
     }
 
     moveToDown() {
@@ -114,6 +118,9 @@ export default class Game extends EventEmitter{
             return
         }
         this.addPiece()
+        this.updatePieces()
+        const clearedLines = this.clearLines()
+        this.updateScore(clearedLines)
     }
 
     rotatePiece() {
@@ -124,14 +131,14 @@ export default class Game extends EventEmitter{
     }
 
     rotate(clockwise = true) {
-        const { block } = this.activePiece
+        const {block} = this.activePiece
         const blockLength = block.length
 
         const rotateYCount = Math.floor(blockLength / 2)
         const rotateXCount = blockLength - 1
 
         for (let i = 0; i < rotateYCount; i++) {
-            for (let j = 0; j < rotateXCount; j++) {
+            for (let j = i; j < rotateXCount - i; j++) {
                 const tmp = block[i][j]
 
                 if (clockwise) {
@@ -163,5 +170,48 @@ export default class Game extends EventEmitter{
         }
 
         return true
+    }
+
+    clearLines() {
+        const playfield = JSON.parse(JSON.stringify(this.playfield));
+        const linesForClear = this.findFullLines()
+
+        linesForClear.forEach(line => {
+            playfield.splice(line, 1)
+        })
+
+        if (linesForClear.length)
+            this.addClearedLines(linesForClear.length, playfield)
+
+        return linesForClear.length
+    }
+
+    addClearedLines(count, playfield) {
+        const pieceOfPlayfield = this.createPlayfield(count, playfield[0].length)
+
+        this.playfield = pieceOfPlayfield.concat(playfield)
+    }
+
+    findFullLines() {
+        const playfield = this.playfield
+        const linesForClear = []
+
+        for (let i = playfield.length - 1; i >= 0; i--) {
+            const line = playfield[i]
+
+            const lineValues = line.filter(el => el !== 0)
+
+            if (lineValues.length === line.length)
+                linesForClear.push(i)
+        }
+
+        return linesForClear
+    }
+
+    updateScore(countClearedLines) {
+        if (countClearedLines <= 0) return
+        this.score += Game.points[countClearedLines]
+        this.lines += countClearedLines
+        console.log(this.score, this.lines)
     }
 }

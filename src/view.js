@@ -1,6 +1,16 @@
 import EventEmitter from "./EventEmitter.js";
 
 export default class View extends EventEmitter {
+    static blockColors = {
+        1: 'rgb(150,100,70)',
+        2: 'rgb(150,0,70)',
+        3: 'rgb(200,100,150)',
+        4: 'rgb(150,220,140)',
+        5: 'rgb(70,10,200)',
+        6: 'rgb(15,100,70)',
+        7: 'rgb(250,100,70)'
+    }
+
     constructor(root, height, width, row, column) {
         super()
         this.root = root
@@ -33,8 +43,9 @@ export default class View extends EventEmitter {
                 if (playfield[i][j]) {
                     const x = this.blockWidth * j
                     const y = this.blockHeight * i
+                    const color = View.blockColors[playfield[i][j]]
 
-                    this.renderBlock(x, y, this.blockWidth, this.blockHeight, 'rgb(150,100,70)')
+                    this.renderBlock(x, y, this.blockWidth, this.blockHeight, color)
                 }
             }
         }
