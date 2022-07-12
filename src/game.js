@@ -11,15 +11,11 @@ export default class Game extends EventEmitter {
 
     lines = 0;
     score = 0;
-    lvl = 0;
 
     constructor(row, column) {
         super()
         this.playfield = this.createPlayfield(row, column)
-        this.activePiece = this.createPiece()
-        this.nextPiece = this.createPiece()
-
-        setInterval(this.moveToDown.bind(this), 1000)
+        this.keydownHandler = this.handleKeydown.bind(this)
     }
 
     get playfieldWithPiece() {
@@ -35,6 +31,60 @@ export default class Game extends EventEmitter {
         }
 
         return playfield
+    }
+
+    get lvl() {
+        const level = Math.floor(this.lines * 0.1)
+        return level === 0 ? 1 : level
+    }
+
+    getState() {
+        return  {
+            playfield: this.playfieldWithPiece,
+            lvl: this.lvl,
+            lines: this.lines,
+            score: this.score,
+            nextPiece: this.nextPiece,
+        }
+    }
+
+    start() {
+        this.activePiece = this.createPiece()
+        this.nextPiece = this.createPiece()
+        document.addEventListener('keydown', this.keydownHandler)
+        document.getElementById('start').disabled = 'true'
+    }
+
+    end() {
+        this.activePiece = {}
+        this.nextPiece = {}
+        document.removeEventListener('keydown', this.keydownHandler)
+        document.getElementById('qwe').textContent = "Игра окончена"
+    }
+
+    handleKeydown(event) {
+        switch (event.key) {
+            case 'ArrowUp':
+                this.moveToUp()
+                break
+            case 'ArrowRight':
+                this.moveToRight()
+                break
+            case 'ArrowDown':
+                this.moveToDown()
+                break
+            case 'ArrowLeft':
+                this.moveToLeft()
+                break
+            case 'Enter':
+                this.rotatePiece()
+                break
+        }
+        this.emit('keydown', this.getState())
+
+        if (!this.checkInside(this.activePiece.x, this.activePiece.y)) {
+            this.emit('endGame')
+        }
     }
 
     createPlayfield(row, column) {
@@ -117,8 +167,16 @@ export default class Game extends EventEmitter {
             this.activePiece.y += 1
             return
         }
+
+        this.updateState()
+
+        this.emit('clearedLines', this.getState())
+    }
+
+    updateState() {
         this.addPiece()
         this.updatePieces()
+
         const clearedLines = this.clearLines()
         this.updateScore(clearedLines)
     }
@@ -209,9 +267,10 @@ export default class Game extends EventEmitter {
     }
 
     updateScore(countClearedLines) {
-        if (countClearedLines <= 0) return
-        this.score += Game.points[countClearedLines]
+        if (countClearedLines <= 0)
+            return
+
+        this.score += Game.points[countClearedLines] * this.lvl
         this.lines += countClearedLines
-        console.log(this.score, this.lines)
     }
 }

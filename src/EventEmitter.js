@@ -17,4 +17,11 @@ export default class EventEmitter {
             event.call(null, data)
         })
     }
+
+    unsubscribe(eventName, fn) {
+        if (!this.events[eventName])
+            return
+
+        this.events[eventName].filter(event => event !== fn)
+    }
 }
